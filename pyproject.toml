@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dtri-office-lunch"
+version = "0.1.0"
+description = "DTRI office lunch ordering helper using Playwright."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "greenlet==3.5.4",
+    "playwright==1.62.0",
+    "pyee==13.0.1",
+    "typing-extensions==4.16.0",
+]
+
+[project.scripts]
+dtri-office-lunch = "dtri_office_lunch.cli:main"
+
+[tool.setuptools]
+packages = ["dtri_office_lunch"]
+
+[tool.setuptools.package-data]
+dtri_office_lunch = ["skills/dtri-office-lunch/SKILL.md"]

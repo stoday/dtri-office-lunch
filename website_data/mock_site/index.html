@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>DTRI 訂便當系統（離線測試）</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; color: #222; }
+    .notice { background: #fff8df; padding: 1rem; border: 1px solid #e5d38b; }
+    .store { border: 1px solid #ddd; margin: 1rem 0; padding: 1rem; }
+    .item { display: grid; grid-template-columns: 1fr auto auto; gap: .75rem; align-items: center; padding: .5rem 0; border-top: 1px solid #eee; }
+    .item small { color: #666; }
+    input[type=text] { width: 14rem; }
+    #cart { position: sticky; top: 0; background: white; padding: .75rem 0; font-weight: bold; }
+    button, input[type=button] { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <nav><a href="/">DTRI訂便當系統</a> <span>離線測試使用者</span></nav>
+  <main>
+    <h1>離線訂便當測試頁</h1>
+    <section class="notice" aria-label="注意事項">
+      <ul>
+        <li>店家結單後無法加訂餐點，10點前請至8樓櫃台繳交現金(請自備零錢)。</li>
+        <li>請確認信件通知及訂購數量是否相符，若有誤請結單前通知櫃台人員。</li>
+        <li>客製化需求非必要服務項目，依據店家回覆為主不另行通知。</li>
+      </ul>
+    </section>
+    <div id="cart" aria-label="購物車">購物車：<span id="cart-count">0</span></div>
+    <section class="store" data-store="弍食穗">
+      <h2>弍食穗</h2><h3>便當</h3>
+      <div class="item" data-item-id="545"><span>水煮嫩雞胸 <small>115 元</small></span><select id="545" aria-label="水煮嫩雞胸數量"><option>0</option><option>1</option><option>2</option><option>3</option></select><input id="rmk545" type="text" placeholder="餐點備註"><input type="button" value="放入購物車" data-add="545"></div>
+      <div class="item" data-item-id="546"><span>清爽豬肉片 <small>110 元</small></span><select id="546" aria-label="清爽豬肉片數量"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select><input id="rmk546" type="text" placeholder="餐點備註"><input type="button" value="放入購物車" data-add="546"></div>
+      <div class="item" data-item-id="550"><span>蒜味塔香牛(有辣) <small>130 元，售完</small></span><select id="550" disabled aria-label="蒜味塔香牛數量"><option>0</option></select><input id="rmk550" type="text" placeholder="餐點備註" disabled></div>
+      <div class="item" data-item-id="720"><span>蔬蔬尬菇菇 <small>120 元</small></span><select id="720" aria-label="蔬蔬尬菇菇數量"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option></select><input id="rmk720" type="text" placeholder="餐點備註"><input type="button" value="放入購物車" data-add="720"></div>
+    </section>
+    <section class="store" data-store="周胖子餃子館">
+      <h2>周胖子餃子館</h2><h3>麵類</h3>
+      <div class="item" data-item-id="923"><span>炸醬麵 <small>100 元</small></span><select id="923" aria-label="炸醬麵數量"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select><input id="rmk923" type="text" placeholder="餐點備註"><input type="button" value="放入購物車" data-add="923"></div>
+      <div class="item" data-item-id="924"><span>酸辣麵 <small>100 元</small></span><select id="924" aria-label="酸辣麵數量"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select><input id="rmk924" type="text" placeholder="餐點備註"><input type="button" value="放入購物車" data-add="924"></div>
+    </section>
+  </main>
+  <script>
+    const cart = new Map();
+    document.querySelectorAll('[data-add]').forEach(button => button.addEventListener('click', () => {
+      const id = button.dataset.add;
+      const quantity = Number(document.getElementById(id).value);
+      if (quantity > 0) cart.set(id, { quantity, note: document.getElementById('rmk' + id).value });
+      document.getElementById('cart-count').textContent = [...cart.values()].reduce((sum, x) => sum + x.quantity, 0);
+    }));
+  </script>
+</body>
+</html>

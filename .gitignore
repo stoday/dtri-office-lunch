@@ -1,0 +1,13 @@
+browser-profile
+.venv
+data/
+*.egg-info/
+build/
+dist/
+__pycache__/
+page_snapshot*.json
+*.log
+*.tmp
+.env
+.agents
+graphify-out
