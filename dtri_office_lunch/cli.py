@@ -459,8 +459,26 @@ def run_submit(
     return 0 if result.get("ok") else 1
 
 
-def install_skill(project_root: Path, platform: str, force: bool = False) -> Path:
-    target_dir = project_root / SKILL_TARGETS[platform]
+def install_skill(
+    project_root: Path | None = None,
+    platform: str | None = None,
+    force: bool = False,
+    *,
+    dest: Path | None = None,
+) -> Path:
+    """Install the packaged skill into a platform preset or explicit skills directory."""
+
+    if (platform is None) == (dest is None):
+        raise RuntimeError("請指定一個平台，或指定 --dest，但不可同時使用兩者。")
+
+    if platform is not None:
+        if project_root is None:
+            raise RuntimeError("平台安裝需要目前 Git repository。")
+        target_dir = project_root / SKILL_TARGETS[platform]
+    else:
+        assert dest is not None
+        target_dir = dest.expanduser().resolve() / SKILL_NAME
+
     target_file = target_dir / "SKILL.md"
     if target_file.exists() and not force:
         raise RuntimeError(
@@ -491,9 +509,16 @@ def build_parser() -> argparse.ArgumentParser:
     submit = subparsers.add_parser("submit", help="stdin 為 YES 時送出待確認訂單。")
     submit.add_argument("order_token", help="prepare 輸出的 ORDER_TOKEN。")
     installer = subparsers.add_parser(
-        "install-skill", help="安裝目前 repository 專用 Skill。"
+        "install-skill", help="安裝隨套件附帶的 Agent Skill。"
     )
-    installer.add_argument("platform", choices=sorted(SKILL_TARGETS))
+    installer.add_argument(
+        "platform", nargs="?", choices=sorted(SKILL_TARGETS), help="內建平台安裝位置。"
+    )
+    installer.add_argument(
+        "--dest",
+        type=Path,
+        help="指定 skills 根目錄；會在其中建立 dtri-office-lunch 子目錄。",
+    )
     installer.add_argument("--force", action="store_true", help="覆寫現有 SKILL.md。")
     return parser
 
@@ -505,6 +530,14 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args(argv)
     try:
+        if args.command == "install-skill":
+            root = find_project_root() if args.platform is not None else None
+            target = install_skill(
+                root, args.platform, args.force, dest=args.dest
+            )
+            print(f"SKILL_INSTALLED: {target}")
+            return 0
+
         root = find_project_root()
         if args.command in (None, "menu"):
             return run_menu(root)
@@ -514,10 +547,6 @@ def main(argv: list[str] | None = None) -> int:
             return run_prepare(root, args.selection_number, args.remark)
         if args.command == "submit":
             return run_submit(root, args.order_token)
-        if args.command == "install-skill":
-            target = install_skill(root, args.platform, args.force)
-            print(f"SKILL_INSTALLED: {target}")
-            return 0
         raise RuntimeError("未知命令。")
     except AuthRequiredError as error:
         print(str(error), file=sys.stderr)

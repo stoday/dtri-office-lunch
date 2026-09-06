@@ -84,9 +84,11 @@ stdout 會顯示商家、餐點、價格、數量、備註與一次性 `ORDER_TO
 
 小寫 `yes`、其他句子或缺少 stdin 都會被拒絕。每個 token 只能嘗試送出一次。
 
-## 安裝 project-local Agent Skill
+## 安裝 Agent Skill
 
-命令會把隨套件附帶的同一份 Skill 安裝到目前 Git repository，不會全域安裝：
+命令會把隨套件附帶的同一份 `SKILL.md` 安裝到目標 skills 目錄；程式功能仍由已安裝的 `dtri-office-lunch` Python 套件提供。
+
+內建平台捷徑會安裝到目前 Git repository，不會全域安裝：
 
 ```powershell
 dtri-office-lunch install-skill codex
@@ -103,6 +105,16 @@ dtri-office-lunch install-skill antigravity
 | Antigravity | `.agents/skills/dtri-office-lunch/SKILL.md` |
 
 Codex 與 Antigravity 共用 Agent Skills 標準位置，因此同一 repository 通常只需寫入一次。現有 Skill 預設不覆蓋；更新時明確加上 `--force`。
+
+### 自訂 skills 目錄
+
+若使用其他 Agent，或希望自行決定安裝位置，使用 `--dest` 指定 **skills 根目錄**：
+
+```powershell
+dtri-office-lunch install-skill --dest C:\my-agent\skills
+```
+
+此例會建立 `C:\my-agent\skills\dtri-office-lunch\SKILL.md`。`--dest` 不需要在 Git repository 內執行，但不得和平台名稱同時使用；例如 `install-skill codex --dest ...` 會被拒絕。目標已有 `SKILL.md` 時同樣須明確加上 `--force` 才會覆寫。
 
 ## 離線驗證
 

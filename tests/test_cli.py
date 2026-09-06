@@ -189,6 +189,44 @@ class CliTests(unittest.TestCase):
             self.assertIn("name: dtri-office-lunch", codex_target.read_text(encoding="utf-8"))
             with self.assertRaisesRegex(RuntimeError, "--force"):
                 cli.install_skill(root, "codex")
+            self.assertEqual(
+                cli.install_skill(root, "codex", True), codex_target
+            )
+
+    def test_install_skill_accepts_an_explicit_skills_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory) / "another-agent" / "skills"
+
+            target = cli.install_skill(dest=skills_dir)
+
+            self.assertEqual(
+                target, skills_dir.resolve() / cli.SKILL_NAME / "SKILL.md"
+            )
+            self.assertIn("name: dtri-office-lunch", target.read_text(encoding="utf-8"))
+            with self.assertRaisesRegex(RuntimeError, "--force"):
+                cli.install_skill(dest=skills_dir)
+            self.assertEqual(cli.install_skill(dest=skills_dir, force=True), target)
+
+    def test_install_skill_requires_exactly_one_target(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".git").mkdir()
+            with self.assertRaisesRegex(RuntimeError, "不可同時使用"):
+                cli.install_skill(root, "codex", dest=root / "skills")
+            with self.assertRaisesRegex(RuntimeError, "請指定一個平台"):
+                cli.install_skill()
+
+    def test_install_skill_dest_does_not_require_a_git_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "other-agent" / "skills"
+            with patch.object(cli, "find_project_root") as find_project_root:
+                exit_code = cli.main(["install-skill", "--dest", str(destination)])
+
+            self.assertEqual(exit_code, 0)
+            find_project_root.assert_not_called()
+            self.assertTrue(
+                (destination / cli.SKILL_NAME / "SKILL.md").is_file()
+            )
 
 
 if __name__ == "__main__":
