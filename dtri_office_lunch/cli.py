@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import secrets
 import sys
@@ -379,6 +380,12 @@ def run_menu(project_root: Path) -> int:
 
 
 def run_prepare(project_root: Path, selection_number: str, remark: str) -> int:
+    record = prepare_order(project_root, selection_number, remark)
+    print(format_order_summary(record))
+    return 0
+
+
+def prepare_order(project_root: Path, selection_number: str, remark: str) -> dict:
     item_id = resolve_menu_selection(project_root, selection_number)
     with authenticated_page(project_root) as page:
         items = available_items(fetch_menu_items(page))
@@ -390,9 +397,61 @@ def run_prepare(project_root: Path, selection_number: str, remark: str) -> int:
             f"序號 {selection_number} 對應的餐點 ID {item_id} 已不可訂；"
             "請重新取得菜單。"
         )
-    record = create_pending_order(project_root, selected, remark)
-    print(format_order_summary(record))
-    return 0
+    return create_pending_order(project_root, selected, remark)
+
+
+def run_order(project_root: Path, timeout_seconds: int) -> int:
+    """Run the human-only interactive ordering flow without bypassing confirmation."""
+
+    if not sys.stdin.isatty():
+        raise RuntimeError("INTERACTIVE_TERMINAL_REQUIRED: order 不接受管線輸入。")
+
+    while True:
+        try:
+            run_menu(project_root)
+        except AuthRequiredError:
+            run_login(project_root, timeout_seconds)
+            run_menu(project_root)
+
+        try:
+            selection_number = input("請輸入餐點編號（直接 Enter 取消）：").strip()
+        except EOFError:
+            print("ORDER_CANCELLED")
+            return 0
+        if not selection_number:
+            print("ORDER_CANCELLED")
+            return 0
+        try:
+            remark = input("備註（可直接 Enter 略過）：").strip()
+        except EOFError:
+            print("ORDER_CANCELLED")
+            return 0
+        try:
+            record = prepare_order(project_root, selection_number, remark)
+        except AuthRequiredError:
+            run_login(project_root, timeout_seconds)
+            continue
+        print(format_order_summary(record))
+        try:
+            confirmation = input(
+                "已閱讀以上訂單摘要後，輸入精確大寫 YES 送出；其他輸入取消："
+            )
+        except EOFError:
+            print("ORDER_CANCELLED")
+            return 0
+        if confirmation != "YES":
+            print("ORDER_CANCELLED")
+            return 0
+        try:
+            return run_submit(
+                project_root, record["token"], input_stream=io.StringIO("YES")
+            )
+        except AuthRequiredError:
+            run_login(project_root, timeout_seconds)
+        except RuntimeError as error:
+            if not str(error).startswith("ORDER_CHANGED"):
+                raise
+            print(str(error))
 
 
 def run_submit(
@@ -501,6 +560,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--timeout", type=int, default=600, help="login 等待秒數（預設 600）。"
     )
     subparsers = parser.add_subparsers(dest="command")
+    subparsers.add_parser("order", help="人類互動式一鍵訂餐流程")
     subparsers.add_parser("menu", help="輸出今日商家與便當選項（預設命令）。")
     subparsers.add_parser("login", help="開啟瀏覽器供使用者手動登入。")
     prepare = subparsers.add_parser("prepare", help="建立一份待確認訂單。")
@@ -539,6 +599,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         root = find_project_root()
+        if args.command == "order":
+            return run_order(root, args.timeout)
         if args.command in (None, "menu"):
             return run_menu(root)
         if args.command == "login":

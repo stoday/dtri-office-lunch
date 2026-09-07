@@ -228,6 +228,83 @@ class CliTests(unittest.TestCase):
                 (destination / cli.SKILL_NAME / "SKILL.md").is_file()
             )
 
+    def test_order_runs_the_human_flow_with_existing_login(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            prepared = {
+                "token": "prepared-token",
+                "item": {"store": "店家", "name": "雞腿飯", "price": 100},
+                "quantity": 1,
+                "remark": "",
+            }
+            with patch.object(cli, "find_project_root", return_value=root), patch.object(
+                cli, "run_menu", return_value=0
+            ) as menu, patch.object(
+                cli, "run_login"
+            ) as login, patch.object(
+                cli, "prepare_order", return_value=prepared
+            ) as prepare, patch.object(
+                cli, "run_submit", return_value=0
+            ) as submit, patch.object(
+                cli.sys.stdin, "isatty", return_value=True
+            ), patch("builtins.input", side_effect=["1", "", "YES"]):
+                self.assertEqual(cli.main(["order"]), 0)
+
+            menu.assert_called_once_with(root)
+            login.assert_not_called()
+            prepare.assert_called_once_with(root, "1", "")
+            submit.assert_called_once()
+            self.assertEqual(submit.call_args.args[:2], (root, "prepared-token"))
+
+    def test_order_returns_to_menu_when_submit_detects_a_changed_order(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            prepared = {
+                "token": "prepared-token",
+                "item": {"store": "店家", "name": "雞腿飯", "price": 100},
+                "quantity": 1,
+                "remark": "",
+            }
+            with patch.object(cli, "find_project_root", return_value=root), patch.object(
+                cli, "run_menu", return_value=0
+            ) as menu, patch.object(
+                cli, "prepare_order", return_value=prepared
+            ), patch.object(
+                cli, "run_submit", side_effect=RuntimeError("ORDER_CHANGED")
+            ), patch.object(
+                cli.sys.stdin, "isatty", return_value=True
+            ), patch("builtins.input", side_effect=["1", "", "YES", ""]):
+                self.assertEqual(cli.main(["order"]), 0)
+
+            self.assertEqual(menu.call_count, 2)
+
+    def test_order_cancels_on_end_of_input_without_preparing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(cli, "find_project_root", return_value=root), patch.object(
+                cli, "run_menu", return_value=0
+            ), patch.object(cli, "prepare_order") as prepare, patch.object(
+                cli.sys.stdin, "isatty", return_value=True
+            ), patch("builtins.input", side_effect=EOFError):
+                self.assertEqual(cli.main(["order"]), 0)
+
+            prepare.assert_not_called()
+
+    def test_order_opens_manual_login_then_resumes_menu(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(cli, "find_project_root", return_value=root), patch.object(
+                cli,
+                "run_menu",
+                side_effect=[cli.AuthRequiredError("AUTH_REQUIRED"), 0],
+            ) as menu, patch.object(cli, "run_login", return_value=0) as login, patch.object(
+                cli.sys.stdin, "isatty", return_value=True
+            ), patch("builtins.input", return_value=""):
+                self.assertEqual(cli.main(["order"]), 0)
+
+            self.assertEqual(menu.call_count, 2)
+            login.assert_called_once_with(root, 600)
+
 
 if __name__ == "__main__":
     unittest.main()

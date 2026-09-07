@@ -32,6 +32,19 @@ CLI 必須在 Git repository 內執行。它會由目前目錄往上尋找 Git r
 
 ## 使用流程
 
+### 人類一鍵訂餐
+
+人類使用者可使用互動式流程，依序完成登入（需要時）、選餐、備註、重新驗證與送單：
+
+```powershell
+dtri-office-lunch order
+```
+
+此命令必須在互動式終端機執行，不接受管線輸入。它會重用本機
+`browser-profile/` 的有效登入 session；首次登入、session 過期、OTP 與 CAPTCHA
+仍會開啟可見瀏覽器，由使用者手動完成。訂單摘要顯示後，只有輸入精確大寫 `YES`
+才會送出；直接 Enter、其他輸入或 EOF 都會取消，不會送單。
+
 ### 1. 手動登入
 
 登入狀態不存在或失效時，查詢命令會以 exit code 2 回報 `AUTH_REQUIRED`，不會自行卡住等待：
